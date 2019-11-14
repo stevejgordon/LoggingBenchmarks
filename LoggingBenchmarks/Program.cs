@@ -1,6 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using JetBrains.Profiler.Api;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -8,49 +7,14 @@ namespace LoggingBenchmarks
 {
     internal class Program
     {
-        private static void Main() => _ = BenchmarkRunner.Run<LoggingBenchmarks>();
-
-        //private static void Main()
-        //{
-        //    IServiceCollection serviceCollection = new ServiceCollection();
-        //    serviceCollection.AddLogging(builder => builder
-        //        .AddFilter(level => level >= LogLevel.Information)
-        //    );
-
-        //    var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
-
-        //    var logger = loggerFactory.CreateLogger("TEST");
-
-        //    var sut1 = new SampleClassWhichLogsOriginal(logger);
-        //    var sut2 = new SampleClassWhichLogs(logger);
-
-        //    const string hello = "Hello";
-        //    const int ten = 10;
-
-        //    MemoryProfiler.CollectAllocations(true);
-            
-        //    MemoryProfiler.GetSnapshot();
-
-        //    sut1.LogOnce(hello, ten);
-
-        //    MemoryProfiler.GetSnapshot();
-
-        //    sut2.DoSomethingWhichLogsOftenUsingLoggerMessage(hello, ten);
-
-        //    MemoryProfiler.GetSnapshot();
-        //}
+        private static void Main(string[] args) => _ = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
     }
 
     [MemoryDiagnoser]
-    public class LoggingBenchmarks
+    public class NoParamLoggingBenchmarks
     {
-        private SampleClassWhichLogsOriginal _sut1;
-        private SampleClassWhichLogs _sut2;
-
-        private const string Value1 = "Value";
-        private const int Value2 = 1000;
-
-        private ILogger _logger;
+        private ClassUsingStandardLogging _sut1;
+        private ClassUsingOptimisedLogging _sut2;
 
         [GlobalSetup]
         public void Setup()
@@ -58,28 +22,122 @@ namespace LoggingBenchmarks
             IServiceCollection serviceCollection = new ServiceCollection();
 
             serviceCollection.AddLogging(builder => builder
-                .AddFilter(level => level >= LogLevel.Information)
+                .AddFilter("LoggingBenchmarks", LogLevel.Information)
             );
 
             var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
 
             var logger = loggerFactory.CreateLogger("TEST");
-            _logger = logger;
 
-            _sut1 = new SampleClassWhichLogsOriginal(logger);
-            _sut2 = new SampleClassWhichLogs(logger);
+            _sut1 = new ClassUsingStandardLogging(logger);
+            _sut2 = new ClassUsingOptimisedLogging(logger);
         }
 
         [Benchmark(Baseline = true)]
-        public void LogDirect() => _sut1.DoSomethingWhichLogsOften(Value1, Value2);
+        public void StandardLoggingNoParams() => _sut1.LogOnceWithNoParam();
 
         [Benchmark]
-        public void LogViaStatic() => _sut2.DoSomethingWhichLogsOftenUsingLoggerMessage(Value1, Value2);
+        public void OptimisedLoggingNoParams() => _sut2.LogOnceNoParams();
+    }
 
-        //[Benchmark]
-        //public void LogDebugWithoutLevelCheck() => _sut2.DoSomethingWhichLogsOftenUsingLoggerMessageWithoutLevelCheck(Value1, Value2);
+    [MemoryDiagnoser]
+    public class OneParamLoggingBenchmarks
+    {
+        private ClassUsingStandardLogging _sut1;
+        private ClassUsingOptimisedLogging _sut2;
 
-        //[Benchmark]
-        //public void LogDebugWithLevelCheck() => _sut2.DoSomethingWhichLogsOftenUsingLoggerMessageWithLevelCheck(Value1, Value2);
+        private const string Value1 = "Value";
+
+        [GlobalSetup]
+        public void Setup()
+        {
+            IServiceCollection serviceCollection = new ServiceCollection();
+
+            serviceCollection.AddLogging(builder => builder
+                .AddFilter("LoggingBenchmarks", LogLevel.Information)
+            );
+
+            var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+
+            var logger = loggerFactory.CreateLogger("TEST");
+
+            _sut1 = new ClassUsingStandardLogging(logger);
+            _sut2 = new ClassUsingOptimisedLogging(logger);
+        }
+
+        [Benchmark(Baseline = true)]
+        public void StandardLoggingOneParam() => _sut1.LogOnceWithOneParam(Value1);
+
+        [Benchmark]
+        public void OptimisedLoggingOneParam() => _sut2.LogOnceOneParam(Value1);
+    }
+
+    [MemoryDiagnoser]
+    public class TwoParamLoggingBenchmarks
+    {
+        private ClassUsingStandardLogging _sut1;
+        private ClassUsingOptimisedLogging _sut2;
+
+        private const string Value1 = "Value";
+        private const int Value2 = 1000;
+
+        [GlobalSetup]
+        public void Setup()
+        {
+            IServiceCollection serviceCollection = new ServiceCollection();
+
+            serviceCollection.AddLogging(builder => builder
+                .AddFilter("LoggingBenchmarks", LogLevel.Information)
+            );
+
+            var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+
+            var logger = loggerFactory.CreateLogger("TEST");
+
+            _sut1 = new ClassUsingStandardLogging(logger);
+            _sut2 = new ClassUsingOptimisedLogging(logger);
+        }
+
+        [Benchmark(Baseline = true)]
+        public void StandardLoggingTwoParams() => _sut1.LogOnceWithTwoParams(Value1, Value2);
+
+        [Benchmark]
+        public void OptimisedLoggingTwoParams() => _sut2.LogOnceTwoParams(Value1, Value2);
+    }
+
+    [MemoryDiagnoser]
+    public class FilteredLoggingBenchmarks
+    {
+        private ClassUsingStandardLogging _sut1;
+        private ClassUsingOptimisedLogging _sut2;
+
+        private const string Value1 = "Value";
+        private const int Value2 = 1000;
+        
+        [GlobalSetup]
+        public void Setup()
+        {
+            IServiceCollection serviceCollection = new ServiceCollection();
+
+            serviceCollection.AddLogging(builder => builder
+                .AddFilter("LoggingBenchmarks", LogLevel.Information)
+            );
+
+            var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+
+            var logger = loggerFactory.CreateLogger("TEST");
+
+            _sut1 = new ClassUsingStandardLogging(logger);
+            _sut2 = new ClassUsingOptimisedLogging(logger);
+        }
+
+        [Benchmark(Baseline = true)]
+        public void StandardLoggingDebug() => _sut1.LogDebugOnceWithTwoParams(Value1, Value2);
+
+        [Benchmark]
+        public void LogDebugWithoutLevelCheck() => _sut2.LogOnceUsingLoggerMessageWithoutLevelCheck(Value1, Value2);
+
+        [Benchmark]
+        public void LogDebugWithLevelCheck() => _sut2.LogOnceUsingLoggerMessageWithLevelCheck(Value1, Value2);
     }
 }

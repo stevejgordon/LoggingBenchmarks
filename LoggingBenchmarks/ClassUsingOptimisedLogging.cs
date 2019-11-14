@@ -31,12 +31,12 @@ namespace LoggingBenchmarks
             private static readonly Action<ILogger, Exception> _informationLoggerMessageNoParams = LoggerMessage.Define(
                 LogLevel.Information,
                 Log.Events.Started,
-                "This is a message with two params!");
+                "This is a message with no params!");
 
             private static readonly Action<ILogger, string, Exception> _informationLoggerMessageOneParam = LoggerMessage.Define<string>(
                 LogLevel.Information,
                 Log.Events.Started,
-                "This is a message with two params! {Param1}");
+                "This is a message with one param! {Param1}");
 
             private static readonly Action<ILogger, string, int, Exception> _informationLoggerMessage = LoggerMessage.Define<string, int>(
                 LogLevel.Information,
@@ -46,7 +46,7 @@ namespace LoggingBenchmarks
             private static readonly Action<ILogger, string, int, Exception> _debugLoggerMessage = LoggerMessage.Define<string, int>(
                 LogLevel.Debug,
                 Log.Events.Started,
-                "This is a message with two params! {Param1}, {Param2}");
+                "This is a debug message with two params! {Param1}, {Param2}");
 
             public static void InformationalMessageNoParams(ILogger logger) => _informationLoggerMessageNoParams(logger, null);
 
